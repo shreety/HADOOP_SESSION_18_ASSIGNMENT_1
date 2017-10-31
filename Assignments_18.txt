@@ -1,0 +1,98 @@
+case class Record(Userid: Int, Arrival: String, Departure: String, Transport: String,Distance: Int, Year: Int)
+case class User(Id: Int,Name: String,Age: Int)
+case class Transport(Name: String,Number: Int)
+
+val dataSetHolidays = sc.textFile("hdfs:///user/cloudera/S18_Dataset_Holidays.txt").filter(_.nonEmpty)
+val UserDetails = sc.textFile("hdfs:///user/cloudera/S18_Dataset_User_details.txt").filter(_.nonEmpty)
+val TransportDetails = sc.textFile("hdfs:///user/cloudera/S18_Dataset_Transport.txt").filter(_.nonEmpty)
+
+val dfRecords = dataSetHolidays.map(_.split(",") match{
+case Array(userid,arrival,departure,transport,distance,year) => Record(userid.toInt,arrival,departure,transport,distance.toInt,year.toInt)
+case unexpectedArrayForm => 
+    throw new RuntimeException("Record did not have correct number of fields: " +
+      unexpectedArrayForm.mkString("\t"))
+}).toDF()
+
+val dfUserRecords = UserDetails.map(_.split(",") match{
+case Array(id,name,age) => User(id.toInt,name,age.toInt)
+case unexpectedArrayForm => 
+    throw new RuntimeException("Record did not have correct number of fields: " +
+      unexpectedArrayForm.mkString("\t"))
+}).toDF()
+
+val dfTransportRecords = TransportDetails.map(_.split(",") match{
+case Array (name,number) => Transport(name,number.toInt)
+case unexpectedArrayForm => 
+    throw new RuntimeException("Record did not have correct number of fields: " +
+      unexpectedArrayForm.mkString("\t"))
+}).toDF()
+
+1. dfRecords.groupBy("Year").count().show()
++----+-----+                                                                    
+|Year|count|
++----+-----+
+|1990|    8|
+|1991|    9|
+|1992|    7|
+|1993|    7|
+|1994|    1|
++----+-----+
+
+2. dfRecords.groupBy("Userid","Year").agg(sum($"Distance").as("Total_distance_travelled")).show()
++------+----+------------------------+                                          
+|Userid|Year|Total_distance_travelled|
++------+----+------------------------+
+|    10|1990|                     200|
+|    10|1992|                     200|
+|    10|1993|                     200|
+|     5|1991|                     200|
+|     5|1992|                     400|
+|     5|1994|                     200|
+|     6|1991|                     400|
+|     6|1993|                     200|
+|     1|1990|                     200|
+|     1|1993|                     600|
+|     7|1990|                     600|
+|     2|1991|                     400|
+|     2|1993|                     200|
+|     8|1990|                     200|
+|     8|1991|                     200|
+|     8|1992|                     200|
+|     3|1991|                     200|
+|     3|1992|                     200|
+|     3|1993|                     200|
+|     9|1991|                     200|
++------+----+------------------------+
+only showing top 20 rows
+ 
+3.val userDistance= dfRecords.groupBy("Userid").agg(sum($"Distance").as("Total_distance_travelled")).orderBy($"Total_distance_travelled".desc)
+
+val userDistance= dfRecords.groupBy("Userid").agg(sum($"Distance").as("Total_distance_travelled")).orderBy($"Total_distance_travelled".desc).show()
++------+------------------------+                                               
+|Userid|Total_distance_travelled|
++------+------------------------+
+|     5|                     800|
+|     1|                     800|
+|     3|                     600|
+|     4|                     600|
+|     2|                     600|
+|     7|                     600|
+|     6|                     600|
+|     8|                     600|
+|     9|                     600|
+|    10|                     600|
++------+------------------------+
+
+4.dfRecords.groupBy("Departure").count().show()
++---------+-----+
+|Departure|count|
++---------+-----+
+|      CHN|    7|
+|      RUS|    6|
+|      PAK|    5|
+|      AUS|    5|
+|      IND|    9|
++---------+-----+
+
+
+
